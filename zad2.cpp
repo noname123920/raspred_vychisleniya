@@ -1,78 +1,161 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <iostream>
+#include <vector>
+#include <cstdlib>
+#include <algorithm>
 #include <omp.h>
-#include <time.h>
-#include <string.h>
-
-#define N 10000
-
-int compare(const void *a, const void *b) {
-    return (*(int*)a - *(int*)b);
-}
-
-void do_work(int k) {
-    int *arr = (int*) malloc(k * sizeof(int));
-    for (int i = 0; i < k; i++) {
-        arr[i] = rand() % 10;
-    }
-    qsort(arr, k, sizeof(int), compare);
-    free(arr);
-}
-
-double run_serial() {
-    double start = omp_get_wtime();
-    for (int k = 1; k <= N; k++) {
-        do_work(k); 
-    } 
-    return omp_get_wtime() - start;
-}
-
-double run_parallel(int num_threads, const char* schedule_type, int chunk) {
-    omp_set_num_threads(num_threads);
-    double start = omp_get_wtime();
-    
-    if (strcmp(schedule_type, "static") == 0) {
-        #pragma omp parallel for schedule(static, chunk)
-        for (int k = 1; k <= N; k++) do_work(k);
-    } else if (strcmp(schedule_type, "dynamic") == 0) {
-        #pragma omp parallel for schedule(dynamic, chunk)
-        for (int k = 1; k <= N; k++) do_work(k);
-    } else if (strcmp(schedule_type, "guided") == 0) {
-        #pragma omp parallel for schedule(guided, chunk)
-        for (int k = 1; k <= N; k++) do_work(k);
-    }
-
-    return omp_get_wtime() - start;
-}
 
 int main() {
-    srand(time(NULL));
+    // последовательный случай с одним главным потоком
+    double total_time_1 = 0.0;
+    for (int run = 1; run <= 5; run++) {
+        double start_time = omp_get_wtime();
 
-    double T1 = 0.0;
-    for (int i = 0; i < 5; i++) {
-        T1 += run_serial();
-    }
-    T1 /= 5.0;
-    printf("T1 (последовательно) = %.6f сек\n\n", T1);
+        for (int i = 1; i <= 10000; i++) {
+            std::vector<int> arr(i);
 
-
-    const char* schedules[] = {"static", "dynamic", "guided"};
-    int chunks[] = {100, 1, 1};
-
-    printf("%-8s %-10s %-12s %-12s\n", "Потоки", "Schedule", "Tp (сред.)", "Ускорение S");
-    printf("----------------------------------------------\n");
-
-    for (int t = 2; t <= 4; t += 2) {
-        for (int s = 0; s < 3; s++) {
-            double total = 0.0;
-            for (int run = 0; run < 5; run++) {
-                total += run_parallel(t, schedules[s], chunks[s]);
+            for (int j = 0; j < i; j++) {
+                arr[j] = rand() % 100;
             }
-            double Tp = total / 5.0;
-            double S = T1/ Tp;
-            printf("%-8d %-10s %-12.6f %-12.4f\n", t, schedules[s], Tp, S);
+            std::sort(arr.begin(), arr.end());
         }
-    }
 
+        double end_time = omp_get_wtime();
+        total_time_1 += (end_time - start_time);
+    }
+    double avg_time_1 = total_time_1 / 5;
+
+    // статические случаи
+    double total_time_2_stat = 0.0;
+    for (int run = 1; run <= 5; run++) {
+        double start_time = omp_get_wtime();
+
+        #pragma omp parallel for num_threads(2) schedule(static)
+        for (int i = 1; i <= 10000; i++) {
+            std::vector<int> arr(i);
+
+            for (int j = 0; j < i; j++) {
+                arr[j] = rand() % 100;
+            }
+            std::sort(arr.begin(), arr.end());
+        }
+
+        double end_time = omp_get_wtime();
+        total_time_2_stat += (end_time - start_time);
+    }
+    double avg_time_2_stat = total_time_2_stat / 5;
+
+    double total_time_4_stat = 0.0;
+    for (int run = 1; run <= 5; run++) {
+        double start_time = omp_get_wtime();
+
+        #pragma omp parallel for num_threads(4) schedule(static)
+        for (int i = 1; i <= 10000; i++) {
+            std::vector<int> arr(i);
+
+            for (int j = 0; j < i; j++) {
+                arr[j] = rand() % 100;
+            }
+            std::sort(arr.begin(), arr.end());
+        }
+
+        double end_time = omp_get_wtime();
+        total_time_4_stat += (end_time - start_time);
+    }
+    double avg_time_4_stat = total_time_4_stat / 5;
+
+    // динамические случаи
+    double total_time_2_dyn = 0.0;
+    for (int run = 1; run <= 5; run++) {
+        double start_time = omp_get_wtime();
+
+        #pragma omp parallel for num_threads(2) schedule(dynamic, 10)
+        for (int i = 1; i <= 10000; i++) {
+            std::vector<int> arr(i);
+
+            for (int j = 0; j < i; j++) {
+                arr[j] = rand() % 100;
+            }
+            std::sort(arr.begin(), arr.end());
+        }
+
+        double end_time = omp_get_wtime();
+        total_time_2_dyn += (end_time - start_time);
+    }
+    double avg_time_2_dyn = total_time_2_dyn / 5;
+
+    double total_time_4_dyn = 0.0;
+    for (int run = 1; run <= 5; run++) {
+        double start_time = omp_get_wtime();
+
+        #pragma omp parallel for num_threads(4) schedule(dynamic, 10)
+        for (int i = 1; i <= 10000; i++) {
+            std::vector<int> arr(i);
+
+            for (int j = 0; j < i; j++) {
+                arr[j] = rand() % 100;
+            }
+            std::sort(arr.begin(), arr.end());
+        }
+
+        double end_time = omp_get_wtime();
+        total_time_4_dyn += (end_time - start_time);
+    }
+    double avg_time_4_dyn = total_time_4_dyn / 5;
+
+    // guided случаи
+    double total_time_2_guid = 0.0;
+    for (int run = 1; run <= 5; run++) {
+        double start_time = omp_get_wtime();
+
+        #pragma omp parallel for num_threads(2) schedule(guided)
+        for (int i = 1; i <= 10000; i++) {
+            std::vector<int> arr(i);
+
+            for (int j = 0; j < i; j++) {
+                arr[j] = rand() % 100;
+            }
+            std::sort(arr.begin(), arr.end());
+        }
+
+        double end_time = omp_get_wtime();
+        total_time_2_guid += (end_time - start_time);
+    }
+    double avg_time_2_guid = total_time_2_guid / 5;
+
+    double total_time_4_guid = 0.0;
+    for (int run = 1; run <= 5; run++) {
+        double start_time = omp_get_wtime();
+
+        #pragma omp parallel for num_threads(4) schedule(guided)
+        for (int i = 1; i <= 10000; i++) {
+            std::vector<int> arr(i);
+
+            for (int j = 0; j < i; j++) {
+                arr[j] = rand() % 100;
+            }
+            std::sort(arr.begin(), arr.end());
+        }
+
+        double end_time = omp_get_wtime();
+        total_time_4_guid += (end_time - start_time);
+    }
+    double avg_time_4_guid = total_time_4_guid / 5;
+
+    std::cout << "Posledovatelno (1 potok) - Srednee vremia: " << avg_time_1 << " sekund." << std::endl;
+    std::cout << "Static (2 potoka) - Srednee vremia: " << avg_time_2_stat << " sekund." << std::endl;
+    std::cout << "Static (4 potoka) - Srednee vremia: " << avg_time_4_stat << " sekund." << std::endl;
+    std::cout << "Dynamic (2 potoka) - Srednee vremia: " << avg_time_2_dyn << " sekund." << std::endl;
+    std::cout << "Dynamic (4 potoka) - Srednee vremia: " << avg_time_4_dyn << " sekund." << std::endl;
+    std::cout << "Guided (2 potoka) - Srednee vremia: " << avg_time_2_guid << " sekund." << std::endl;
+    std::cout << "Guided (4 potoka) - Srednee vremia: " << avg_time_4_guid << " sekund." << std::endl;
+
+    std::cout << std::endl;
+
+    std::cout << "Static (2 potoka) - Uskorenie: " << avg_time_1 / avg_time_2_stat << " raza." << std::endl;
+    std::cout << "Static (4 potoka) - Uskorenie: " << avg_time_1 / avg_time_4_stat << " raza." << std::endl;
+    std::cout << "Dynamic (2 potoka) - Uskorenie: " << avg_time_1 / avg_time_2_dyn << " raza." << std::endl;
+    std::cout << "Dynamic (4 potoka) - Uskorenie: " << avg_time_1 / avg_time_4_dyn << " raza." << std::endl;
+    std::cout << "Guided (2 potoka) - Uskorenie: " << avg_time_1 / avg_time_2_guid << " raza." << std::endl;
+    std::cout << "Guided (4 potoka) - Uskorenie: " << avg_time_1 / avg_time_4_guid << " raza." << std::endl;
     return 0;
 }
