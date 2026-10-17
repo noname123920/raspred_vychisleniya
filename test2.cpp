@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <vector>
 // #define N 5
 
 int main() {
@@ -12,7 +13,14 @@ int main() {
     // printf("*p = %d\n", *p);
     // printf("после *p = 100: x = %d\n", x);
 
-    int x = 42;
-    void *vp = &x;
-    printf("*(int*)vp = %d\n", *(int*)vp);
+    // int x = 42;
+    // void *vp = &x;
+    // printf("*(int*)vp = %d\n", *(int*)vp);
+
+    for (int k = 1; k <= 5; k++) {
+        std::vector<int> arr(k);
+        std::cout << "Krug nomer: " << k << ". Sozdan shkaf razmerom: " << arr.size() << "yashikov" << std::endl;
+    }
+
+    return 0;
 }
